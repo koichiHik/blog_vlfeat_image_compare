@@ -115,7 +115,7 @@ int main(int argc, char** argv) {
 
   // X. Data directory.
   const std::string image_dir =
-      FLAGS_image_directory.empty() ? project_folder_path + "image" : FLAGS_image_directory;
+      FLAGS_image_directory.empty() ? project_folder_path + "/image" : FLAGS_image_directory;
   const std::string data_dir =
       FLAGS_data_directory.empty() ? project_folder_path + "/data" : FLAGS_data_directory;
 
