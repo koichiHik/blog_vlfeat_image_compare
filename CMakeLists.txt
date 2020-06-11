@@ -22,7 +22,7 @@ link_directories(${CMAKE_SOURCE_DIR}/extern/lib)
 ############# Sift Extractor. #################
 
 set(TARGET "image_compare")
-set(SRC src/image_compare.cc)
+set(SRC src/image_compare.cc src/global_descriptor.cc)
 
 # Generate Exe Files
 add_executable(${TARGET} ${SRC})

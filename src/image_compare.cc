@@ -1,6 +1,7 @@
 
 
 // STL
+#include <chrono>
 #include <filesystem>
 #include <fstream>
 #include <string>
@@ -26,10 +27,12 @@
 
 // Original
 #include "eigen_serializable.h"
+#include "global_descriptor.h"
 #include "image_descriptor.h"
 
 DEFINE_string(image_directory, "", "");
 DEFINE_string(data_directory, "", "");
+DEFINE_string(gmm_directory, "", "");
 
 // Value defined in CMakeLists.txt file.
 static const std::string project_folder_path = PRJ_FOLDER_PATH;
@@ -131,7 +134,17 @@ int main(int argc, char** argv) {
   LoadImageInfo(image_files, feature_files, image_info_map);
 
   // X. Display Key Points.
-  DisplayKeyPoints(image_info_map);
+  // DisplayKeyPoints(image_info_map);
+
+  // X. Train GMM with Deserialized data.
+  int dimension = 128;
+  int cluster = 30;
+  FisherVectorEncoder fisher_encoder(dimension, cluster);
+  LOG(INFO) << "GMM Training Start.";
+  int max_itr = 100;
+  fisher_encoder.TrainGMM(max_itr, image_info_map);
+  fisher_encoder.SaveGMM(FLAGS_gmm_directory + "gmm.bin");
+  LOG(INFO) << "GMM Training Finish.";
 
   return 0;
 }
