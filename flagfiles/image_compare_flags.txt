@@ -1,0 +1,4 @@
+
+## Sample Image Path
+--image_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt/images
+--data_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt/sift

@@ -1,0 +1,6 @@
+[submodule "extern/vlfeat"]
+	path = extern/vlfeat
+	url = git@github.com:vlfeat/vlfeat.git
+[submodule "extern/cereal"]
+	path = extern/cereal
+	url = git@github.com:USCiLab/cereal.git
