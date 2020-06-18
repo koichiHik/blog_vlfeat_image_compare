@@ -20,6 +20,8 @@
 
 class FisherVectorEncoder {
  public:
+  FisherVectorEncoder(const std::string& gmm_file_path);
+
   FisherVectorEncoder(uint64_t num_dimension, uint64_t num_clusters);
 
   void TrainGMM(uint64_t max_itr, const std::vector<Eigen::VectorXf>& train_data);

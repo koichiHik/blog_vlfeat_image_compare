@@ -50,6 +50,10 @@ std::vector<Eigen::VectorXf> ConvertImageInfoToFeatureVectors(
 
 }  // namespace
 
+FisherVectorEncoder::FisherVectorEncoder(const std::string& gmm_file_path) {
+  this->LoadGMM(gmm_file_path);
+}
+
 FisherVectorEncoder::FisherVectorEncoder(uint64_t num_dimension, uint64_t num_clusters)
     : num_dimension_(num_dimension), num_clusters_(num_clusters) {}
 
@@ -106,14 +110,17 @@ void FisherVectorEncoder::TrainGMM(
 
 Eigen::VectorXf FisherVectorEncoder::ComputeFisherVector(
     const std::vector<Eigen::VectorXf>& features) {
-  Eigen::VectorXf fisher_vector(2 * features.size() * num_clusters_);
+  LOG(INFO) << "Initialize Fisher Vector : " << features.size() << ", " << num_clusters_;
+  Eigen::VectorXf fisher_vector(2 * features[0].size() * num_clusters_);
 
   Eigen::MatrixXf feature_matrix = ConvertVectorOfFeaturesToMatrix(features);
 
+  LOG(INFO) << "vl_fisher_code";
   vl_fisher_encode(fisher_vector.data(), VL_TYPE_FLOAT, means_.data(), num_dimension_,
                    num_clusters_, covariances_.data(), priors_.data(), feature_matrix.data(),
                    feature_matrix.cols(), VL_FISHER_FLAG_IMPROVED);
 
+  LOG(INFO) << "vl_fisher_code Done";
   return fisher_vector;
 }
 
@@ -124,6 +131,8 @@ void FisherVectorEncoder::SaveGMM(const std::string& filepath) {
   // posteriors : sizeof(float) * num_clusters * num_data
 
   LOG(INFO) << "Saving binary to : " << filepath;
+  LOG(INFO) << "num_dimension_ : " << num_dimension_ << ", num_clusters_ : " << num_clusters_
+            << ", num_data : " << num_data_;
   std::ofstream writer(filepath, std::ios::out | std::ios::binary);
   cereal::PortableBinaryOutputArchive output_archive(writer);
   output_archive(num_dimension_, num_clusters_, num_data_);
@@ -132,8 +141,12 @@ void FisherVectorEncoder::SaveGMM(const std::string& filepath) {
 
 void FisherVectorEncoder::LoadGMM(const std::string& filepath) {
   LOG(INFO) << "Loading binary from : " << filepath;
-  std::ofstream reader(filepath, std::ios::in | std::ios::binary);
-  cereal::PortableBinaryOutputArchive input_archive(reader);
+  std::ifstream reader(filepath, std::ios::in | std::ios::binary);
+  cereal::PortableBinaryInputArchive input_archive(reader);
   input_archive(num_dimension_, num_clusters_, num_data_);
   input_archive(means_, covariances_, priors_, posteriors_);
+
+  LOG(INFO) << "num_dimensions_ : " << num_dimension_;
+  LOG(INFO) << "num_clusters_   : " << num_clusters_;
+  LOG(INFO) << "num_data_       : " << num_data_;
 }

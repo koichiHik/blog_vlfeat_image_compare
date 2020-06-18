@@ -1,0 +1,4 @@
+
+--sift_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/sift/
+--matching_matrix_path=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/matching_matrix.bin
+--gmm_path=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/gmm.bin

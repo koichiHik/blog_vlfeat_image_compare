@@ -1,0 +1,4 @@
+
+--image_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octaven1/images/
+--sift_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octaven1/sift/
+--gmm_path=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octaven1/gmm.bin

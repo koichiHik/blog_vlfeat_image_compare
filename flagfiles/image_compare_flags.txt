@@ -1,5 +1,0 @@
-
-## Sample Image Path
---image_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/images/
---data_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/sift/
---gmm_directory=/home/koichi/Desktop/SFM_Picture/Gendarmenmarkt_octave0/

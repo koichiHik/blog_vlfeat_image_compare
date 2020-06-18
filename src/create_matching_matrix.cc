@@ -15,7 +15,8 @@
 
 // Cereal
 #include <cereal/archives/portable_binary.hpp>
-#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/unordered_map.hpp>
 
 // Eigen
 #include <eigen3/Eigen/Core>
@@ -30,9 +31,9 @@
 #include "global_descriptor.h"
 #include "image_descriptor.h"
 
-DEFINE_string(image_directory, "", "");
-DEFINE_string(data_directory, "", "");
-DEFINE_string(gmm_directory, "", "");
+DEFINE_string(sift_directory, "", "");
+DEFINE_string(matching_matrix_path, "", "");
+DEFINE_string(gmm_path, "", "");
 
 // Value defined in CMakeLists.txt file.
 static const std::string project_folder_path = PRJ_FOLDER_PATH;
@@ -74,18 +75,26 @@ void LoadKeyPointsAndFeatures(const std::string& bin_file_path, std::vector<KeyP
 
 void LoadImageInfo(const std::vector<std::string>& image_files,
                    const std::vector<std::string>& feature_files,
-                   std::unordered_map<std::string, ImageInfo>& iamge_info_map) {
-  CHECK_GE(image_files.size(), feature_files.size());
+                   std::unordered_map<std::string, ImageInfo>& iamge_info_map,
+                   bool load_images = false) {
+  if (load_images) {
+    CHECK_GE(image_files.size(), feature_files.size());
+  }
 
   for (const auto feature_path : feature_files) {
     const std::string filename_wo_ext =
         std::filesystem::path(feature_path).filename().replace_extension("");
-    std::string image_path = GetFilePath(filename_wo_ext, image_files);
 
-    cv::Mat image = cv::imread(image_path);
     std::vector<KeyPoint> keypoints;
     std::vector<Eigen::VectorXf> descriptors;
     LoadKeyPointsAndFeatures(feature_path, keypoints, descriptors);
+
+    cv::Mat image;
+    if (load_images) {
+      std::string image_path = GetFilePath(filename_wo_ext, image_files);
+      image = cv::imread(image_path);
+    }
+
     iamge_info_map[filename_wo_ext] = ImageInfo(image, keypoints, descriptors);
   }
 }
@@ -107,6 +116,54 @@ void DisplayKeyPoints(const std::unordered_map<std::string, ImageInfo>& info_map
   }
 }
 
+void CreateMatchingMatrix(const std::string& gmm_file_path, const std::string& matching_matrix_path,
+                          std::unordered_map<std::string, ImageInfo>& image_info_map) {
+  FisherVectorEncoder fisher_encoder(gmm_file_path);
+
+  // X.
+  LOG(INFO) << "Create filename index map.";
+  std::unordered_map<std::string, int> filenames_indices;
+  std::unordered_map<int, std::string> indices_filemanes;
+  int index = 0;
+  for (auto citr = image_info_map.cbegin(); citr != image_info_map.cend(); ++citr) {
+    std::filesystem::path p(citr->first);
+    std::string filename = p.replace_extension("").filename().string();
+    filenames_indices[filename] = index;
+    indices_filemanes[index] = filename;
+    index++;
+  }
+
+  LOG(INFO) << "Matching matrix computation starts!";
+  int size = image_info_map.size();
+  Eigen::MatrixXf matching_matrix(size, size);
+
+  LOG(INFO) << "Size : " << size;
+  for (const auto& [filename1, value] : image_info_map) {
+    int idx1 = filenames_indices[filename1];
+    matching_matrix(idx1, idx1) = 0.0;
+
+    for (int idx2 = idx1 + 1; idx2 < size; idx2++) {
+      Eigen::VectorXf feature1 =
+          fisher_encoder.ComputeFisherVector(image_info_map[filename1].descriptors_);
+
+      std::string filename2 = indices_filemanes[idx2];
+      Eigen::VectorXf feature2 =
+          fisher_encoder.ComputeFisherVector(image_info_map[filename2].descriptors_);
+
+      float score = (feature1 - feature2).squaredNorm();
+
+      matching_matrix(idx1, idx2) = score;
+      matching_matrix(idx2, idx1) = score;
+    }
+  }
+
+  std::cout << matching_matrix << std::endl;
+
+  std::ofstream writer(matching_matrix_path, std::ios::out | std::ios::binary);
+  cereal::PortableBinaryOutputArchive output_archive(writer);
+  output_archive(filenames_indices, matching_matrix);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -117,34 +174,20 @@ int main(int argc, char** argv) {
   google::InitGoogleLogging(argv[0]);
 
   // X. Data directory.
-  const std::string image_dir =
-      FLAGS_image_directory.empty() ? project_folder_path + "/image" : FLAGS_image_directory;
-  const std::string data_dir =
-      FLAGS_data_directory.empty() ? project_folder_path + "/data" : FLAGS_data_directory;
+  const std::string sift_dir =
+      FLAGS_sift_directory.empty() ? project_folder_path + "/data" : FLAGS_sift_directory;
 
   // X. Extract binary file paths.
   std::vector<std::string> image_files, feature_files;
-  LOG(INFO) << "Loag all image file paths.";
-  ExtractAllFilePathsInDirectory(image_dir, image_files);
   LOG(INFO) << "Loag all binary file paths.";
-  ExtractAllFilePathsInDirectory(data_dir, feature_files);
+  ExtractAllFilePathsInDirectory(sift_dir, feature_files);
 
   // X. Deserialize
   std::unordered_map<std::string, ImageInfo> image_info_map;
-  LoadImageInfo(image_files, feature_files, image_info_map);
-
-  // X. Display Key Points.
-  // DisplayKeyPoints(image_info_map);
+  LoadImageInfo(image_files, feature_files, image_info_map, false);
 
   // X. Train GMM with Deserialized data.
-  int dimension = 128;
-  int cluster = 30;
-  FisherVectorEncoder fisher_encoder(dimension, cluster);
-  LOG(INFO) << "GMM Training Start.";
-  int max_itr = 100;
-  fisher_encoder.TrainGMM(max_itr, image_info_map);
-  fisher_encoder.SaveGMM(FLAGS_gmm_directory + "gmm.bin");
-  LOG(INFO) << "GMM Training Finish.";
+  CreateMatchingMatrix(FLAGS_gmm_path, FLAGS_matching_matrix_path, image_info_map);
 
   return 0;
 }
