@@ -81,9 +81,14 @@ void LoadImageInfo(const std::vector<std::string>& image_files,
     CHECK_GE(image_files.size(), feature_files.size());
   }
 
+  int total_size = feature_files.size();
+  int cnt = 0;
   for (const auto feature_path : feature_files) {
     const std::string filename_wo_ext =
         std::filesystem::path(feature_path).filename().replace_extension("");
+
+    LOG(INFO) << "Load image info... " << cnt << " / " << total_size;
+    cnt++;
 
     std::vector<KeyPoint> keypoints;
     std::vector<Eigen::VectorXf> descriptors;
@@ -137,11 +142,13 @@ void CreateMatchingMatrix(const std::string& gmm_file_path, const std::string& m
   int size = image_info_map.size();
   Eigen::MatrixXf matching_matrix(size, size);
 
-  LOG(INFO) << "Size : " << size;
+  int cnt = 0;
   for (const auto& [filename1, value] : image_info_map) {
     int idx1 = filenames_indices[filename1];
     matching_matrix(idx1, idx1) = 0.0;
 
+    LOG(INFO) << "Image Distance... " << cnt << " / " << size;
+    cnt++;
     for (int idx2 = idx1 + 1; idx2 < size; idx2++) {
       Eigen::VectorXf feature1 =
           fisher_encoder.ComputeFisherVector(image_info_map[filename1].descriptors_);
@@ -179,7 +186,7 @@ int main(int argc, char** argv) {
 
   // X. Extract binary file paths.
   std::vector<std::string> image_files, feature_files;
-  LOG(INFO) << "Loag all binary file paths.";
+  LOG(INFO) << "Load all binary file paths.";
   ExtractAllFilePathsInDirectory(sift_dir, feature_files);
 
   // X. Deserialize

@@ -25,6 +25,15 @@ cd ${TOP_DIR}
 fi
 
 ################################
+# Configure matplot-cpp.    #
+################################
+if [ ! -e "${INSTALL_DIR}/include/matplotlib-cpp" ]; then
+  mkdir -p "${INSTALL_DIR}/include/matplotlib-cpp"
+fi
+
+cp -r extern/matplotlib-cpp/matplotlibcpp.h "${INSTALL_DIR}/include/matplotlib-cpp/"
+
+################################
 # Configure Vlfeat Library.    #
 ################################
 if [ ! -e "${INSTALL_DIR}/include/vl" ]; then

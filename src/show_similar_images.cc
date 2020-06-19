@@ -26,6 +26,9 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
+// Matplotlib-CPP
+#include "matplotlib-cpp/matplotlibcpp.h"
+
 // Original
 #include "eigen_serializable.h"
 #include "global_descriptor.h"
@@ -82,9 +85,14 @@ void LoadImageInfo(const std::vector<std::string>& image_files,
     CHECK_GE(image_files.size(), feature_files.size());
   }
 
+  int total_size = feature_files.size();
+  int cnt = 0;
   for (const auto feature_path : feature_files) {
     const std::string filename_wo_ext =
         std::filesystem::path(feature_path).filename().replace_extension("");
+
+    LOG(INFO) << "Load image info... " << cnt << " / " << total_size;
+    cnt++;
 
     std::vector<KeyPoint> keypoints;
     std::vector<Eigen::VectorXf> descriptors;
@@ -143,18 +151,13 @@ void CreateMatchingMatrix(const std::string& gmm_file_path, const std::string& m
     int idx1 = filenames_indices[filename1];
     matching_matrix(idx1, idx1) = 0.0;
 
-    // LOG(INFO) << "idx1 : " << idx1;
-
     for (int idx2 = idx1 + 1; idx2 < size; idx2++) {
-      // LOG(INFO) << "idx2 : " << idx2;
       Eigen::VectorXf feature1 =
           fisher_encoder.ComputeFisherVector(image_info_map[filename1].descriptors_);
-      // LOG(INFO) << "Descriptor1 : " << feature1;
 
       std::string filename2 = indices_filemanes[idx2];
       Eigen::VectorXf feature2 =
           fisher_encoder.ComputeFisherVector(image_info_map[filename2].descriptors_);
-      // LOG(INFO) << "Descriptor2 : " << feature2;
 
       float score = (feature1 - feature2).squaredNorm();
 
@@ -194,25 +197,39 @@ void ShowTopXImages(const std::string& target_filename, const Eigen::MatrixXf& m
     indices_filenames[value] = key;
   }
 
+  // X. Create Vector with Matching Score.
   int idx = filenames_indices[tgt];
-
   int len = matching_matrix.cols();
   std::vector<float> vec(len);
-  matching_matrix.col(idx);
-
   for (int i = 0; i < len; i++) {
     vec[i] = matching_matrix(i, idx);
   }
+  std::vector<float> sorted_score_vec(vec);
+  std::sort(sorted_score_vec.begin(), sorted_score_vec.end());
 
   cv::imshow("Target Image", image_info_map[tgt].image_);
 
   for (int i = 0; i < top_x; i++) {
     int min_idx = std::min_element(vec.begin(), vec.end()) - vec.begin();
+    float score = vec[min_idx];
     vec[min_idx] = std::numeric_limits<float>::max();
+
+    // X. Skip query image.
+    if (score == 0) {
+      continue;
+    }
+
     std::string filename = indices_filenames[min_idx];
+    LOG(INFO) << "Image of score    : " << score;
+    LOG(INFO) << "Filename of image : " << filename;
     cv::imshow("Similar Image", image_info_map[filename].image_);
     cv::waitKey(0);
   }
+
+  // X. Skip query image.
+  std::vector<float> plot_data(sorted_score_vec.begin() + 1, sorted_score_vec.end());
+  matplotlibcpp::plot(plot_data);
+  matplotlibcpp::show();
 }
 
 }  // namespace
@@ -232,24 +249,24 @@ int main(int argc, char** argv) {
 
   // X. Extract binary file paths.
   std::vector<std::string> image_files, feature_files;
-  LOG(INFO) << "Loag all image file paths.";
+  LOG(INFO) << "Load all image file paths.";
   ExtractAllFilePathsInDirectory(image_dir, image_files);
-  LOG(INFO) << "Loag all binary file paths.";
+  LOG(INFO) << "Load all binary file paths.";
   ExtractAllFilePathsInDirectory(sift_dir, feature_files);
 
   // X. Deserialize
-  LOG(INFO) << "Loag ImageInfo.";
+  LOG(INFO) << "Load ImageInfo.";
   std::unordered_map<std::string, ImageInfo> image_info_map;
   LoadImageInfo(image_files, feature_files, image_info_map, true);
 
   // X. Train GMM with Deserialized data.
-  LOG(INFO) << "Loag matching matrix.";
+  LOG(INFO) << "Load matching matrix.";
   std::unordered_map<std::string, int> image_indices;
   Eigen::MatrixXf matching_matrix;
   LoadMatchingMatrix(FLAGS_matching_matrix_path, image_indices, matching_matrix);
 
   // X.
-  ShowTopXImages(FLAGS_target_filename, matching_matrix, 5, image_indices, image_info_map);
+  ShowTopXImages(FLAGS_target_filename, matching_matrix, 20, image_indices, image_info_map);
 
   return 0;
 }

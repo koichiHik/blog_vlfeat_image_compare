@@ -14,6 +14,7 @@ FIND_PACKAGE(OpenCV)
 FIND_PACKAGE(Glog)
 FIND_PACKAGE(Gflags)
 FIND_PACKAGE(Eigen3)
+FIND_PACKAGE(PythonLibs 3.2 REQUIRED)
 
 include_directories(${CMAKE_SOURCE_DIR})
 include_directories(${CMAKE_SOURCE_DIR}/extern/lib/include)
@@ -57,9 +58,11 @@ set(SRC src/show_similar_images.cc src/global_descriptor.cc)
 
 # Generate Exe Files
 add_executable(${TARGET} ${SRC})
+target_include_directories(${TARGET} PUBLIC ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(${TARGET} ${GFLAGS_LIBRARIES})
 target_link_libraries(${TARGET} ${GLOG_LIBRARIES})
 target_link_libraries(${TARGET} ${OpenCV_LIBS})
+target_link_libraries(${TARGET} ${PYTHON_LIBRARIES})
 target_link_libraries(${TARGET} vl)
 target_link_libraries(${TARGET} stdc++fs)
 

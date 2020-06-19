@@ -110,17 +110,14 @@ void FisherVectorEncoder::TrainGMM(
 
 Eigen::VectorXf FisherVectorEncoder::ComputeFisherVector(
     const std::vector<Eigen::VectorXf>& features) {
-  LOG(INFO) << "Initialize Fisher Vector : " << features.size() << ", " << num_clusters_;
   Eigen::VectorXf fisher_vector(2 * features[0].size() * num_clusters_);
 
   Eigen::MatrixXf feature_matrix = ConvertVectorOfFeaturesToMatrix(features);
 
-  LOG(INFO) << "vl_fisher_code";
   vl_fisher_encode(fisher_vector.data(), VL_TYPE_FLOAT, means_.data(), num_dimension_,
                    num_clusters_, covariances_.data(), priors_.data(), feature_matrix.data(),
                    feature_matrix.cols(), VL_FISHER_FLAG_IMPROVED);
 
-  LOG(INFO) << "vl_fisher_code Done";
   return fisher_vector;
 }
 

@@ -4,3 +4,7 @@
 [submodule "extern/cereal"]
 	path = extern/cereal
 	url = git@github.com:USCiLab/cereal.git
+
+[submodule "extern/matplotlib-cpp"]
+	path = extern/matplotlib-cpp
+	url = git@github.com:lava/matplotlib-cpp.git
